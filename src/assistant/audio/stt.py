@@ -7,8 +7,14 @@ from ..core.logger import log
 MIC_DEVICE = 1
 DEBUG_AUDIO = False
 
-BASE_DIR = Path(__file__).resolve().parents[3]
-MODEL_PATH = BASE_DIR / "models" / "vosk-pt"
+
+# =================================================
+# PATH CORRETO (ROOT = src/assistant)
+# =================================================
+ASSISTANT_DIR = Path(__file__).resolve().parents[1]
+
+MODEL_PATH = ASSISTANT_DIR / "models" / "vosk-pt"
+
 
 _model = None
 _rec = None
@@ -22,6 +28,9 @@ def _init_stt():
         return
 
     log("STT", f"loading model from {MODEL_PATH}")
+
+    if not MODEL_PATH.exists():
+        raise FileNotFoundError(f"Vosk model not found: {MODEL_PATH}")
 
     _model = Model(str(MODEL_PATH))
 

@@ -1,35 +1,30 @@
-from sentence_transformers import SentenceTransformer, util
-from .intents import INTENTS
+import pickle
+from pathlib import Path
 from ..core.logger import log
 
-model = SentenceTransformer("all-MiniLM-L6-v2")
 
-INTENT_NAMES = list(INTENTS.keys())
-INTENT_TEXTS = list(INTENTS.values())
-
-intent_embeddings = model.encode(INTENT_TEXTS, convert_to_tensor=True)
+BASE_DIR = Path(__file__).resolve().parents[1]
+MODEL_DIR = BASE_DIR / "brain"
 
 
-def detect_intent(text: str, threshold: float = 0.45) -> dict:
-    text_embedding = model.encode(text, convert_to_tensor=True)
+with open(MODEL_DIR / "vectorizer.pkl", "rb") as f:
+    vectorizer = pickle.load(f)
 
-    scores = util.cos_sim(text_embedding, intent_embeddings)[0]
+with open(MODEL_DIR / "intent_model.pkl", "rb") as f:
+    model = pickle.load(f)
 
-    best_idx = scores.argmax().item()
-    confidence = float(scores[best_idx].item())
-    intent = INTENT_NAMES[best_idx]
+
+def detect_intent(text: str) -> dict:
+    X = vectorizer.transform([text])
+
+    intent = model.predict(X)[0]
+
+    probs = model.predict_proba(X)[0]
+    confidence = float(max(probs))
 
     log("NLP", f"{intent} ({confidence:.2f}) | input='{text}'")
 
-    if confidence < threshold:
-        return {
-            "intent": "fallback",
-            "confidence": confidence,
-            "source": "nlp"
-        }
+    if confidence < 0.45:
+        return {"intent": "fallback", "confidence": confidence, "source": "nlp"}
 
-    return {
-        "intent": intent,
-        "confidence": confidence,
-        "source": "nlp"
-    }
+    return {"intent": intent, "confidence": confidence, "source": "nlp"}
