@@ -13,7 +13,7 @@ dispositivos de baixo consumo como:
 
 ## Arquitetura
 
-Fluxo principal do sistema:
+O sistema segue um modelo **NLP-first com fallback LLM local**. Fluxo principal do sistema:
 
 ``` text
 microfone
@@ -43,9 +43,11 @@ confidence gate (decisão de confiança)
                  ↓
                  ↓ fallback inteligente (quando necessário)
                  ↓
-            llama.cpp (GGUF quantizado)
+        llama.cpp (CLI local: llama-cli / llama-completion)
                  ↓
-      interpretação semântica da intenção
+     modelo GGUF quantizado (ex: Qwen 2.5 0.5B)
+                 ↓
+     extração estruturada de intenção (JSON)
                  ↓
         Router (segunda decisão)
                  ↓
@@ -59,51 +61,70 @@ confidence gate (decisão de confiança)
 ## Estrutura do projeto
 
 ```text
-├── 📁 models
-│   ├── 📁 vosk-pt
-│   │   ├── 📁 ivector
-│   │   │   ├── 📄 final.dubm
-│   │   │   ├── 📄 final.ie
-│   │   │   ├── 📄 final.mat
-│   │   │   ├── 📄 global_cmvn.stats
-│   │   │   ├── ⚙️ online_cmvn.conf
-│   │   │   └── ⚙️ splice.conf
-│   │   ├── 📄 Gr.fst
-│   │   ├── 📄 HCLr.fst
-│   │   ├── 📄 README
-│   │   ├── 📄 disambig_tid.int
-│   │   ├── 📄 final.mdl
-│   │   ├── ⚙️ mfcc.conf
-│   │   ├── 📄 phones.txt
-│   │   └── 📄 word_boundary.int
-│   └── 📄 qwen2.5-0.5b-instruct-q4_k_m.gguf
-├── 📁 src
-│   └── 📁 assistant
-│       ├── 📁 actions
-│       │   ├── 🐍 __init__.py
-│       │   ├── 🐍 gpio.py
-│       │   └── 🐍 system.py
-│       ├── 📁 audio
-│       │   ├── 🐍 __init__.py
-│       │   ├── 🐍 stt.py
-│       │   └── 🐍 tts.py
-│       ├── 📁 brain
-│       │   ├── 🐍 __init__.py
-│       │   ├── 🐍 intents.py
-│       │   ├── 🐍 llm.py
-│       │   ├── 🐍 nlp.py
-│       │   ├── 🐍 prompts.py
-│       │   └── 🐍 train_intents.py
-│       ├── 📁 core
-│       │   ├── 🐍 __init__.py
-│       │   ├── 🐍 logger.py
-│       │   └── 🐍 router.py
-│       ├── 🐍 __init__.py
-│       └── 🐍 main.py
-├── 📁 tests
-├── 📝 README.md
-├── 📄 poetry.lock
-└── ⚙️ pyproject.toml
+└── 📁 assistant
+    ├── 📁 actions
+    │   ├── 🐍 __init__.py
+    │   ├── 🐍 gpio.py
+    │   └── 🐍 system.py
+    │
+    ├── 📁 audio
+    │   ├── 🐍 __init__.py
+    │   ├── 🐍 stt.py
+    │   └── 🐍 tts.py
+    │
+    ├── 📁 brain
+    │   ├── 🐍 __init__.py
+    │   ├── 📄 intent_model.pkl
+    │   ├── 🐍 intents.py
+    │   ├── 🐍 llm.py
+    │   ├── 🐍 nlp.py
+    │   ├── 🐍 prompts.py
+    │   ├── 🐍 train_intents.py
+    │   └── 📄 vectorizer.pkl
+    │
+    ├── 📁 core
+    │   ├── 🐍 __init__.py
+    │   ├── 🐍 logger.py
+    │   └── 🐍 router.py
+    │
+    ├── 📁 datasets
+    │   ├── 🐍 __init__.py
+    │   └── ⚙️ intents.json
+    │
+    ├── 📁 models
+    │   ├── 📁 vosk-pt
+    │   │   ├── 📁 ivector
+    │   │   │   ├── 📄 final.dubm
+    │   │   │   ├── 📄 final.ie
+    │   │   │   ├── 📄 final.mat
+    │   │   │   ├── 📄 global_cmvn.stats
+    │   │   │   ├── ⚙️ online_cmvn.conf
+    │   │   │   └── ⚙️ splice.conf
+    │   │   ├── 📄 Gr.fst
+    │   │   ├── 📄 HCLr.fst
+    │   │   ├── 📄 README
+    │   │   ├── 📄 disambig_tid.int
+    │   │   ├── 📄 final.mdl
+    │   │   ├── ⚙️ mfcc.conf
+    │   │   ├── 📄 phones.txt
+    │   │   └── 📄 word_boundary.int
+    │   │
+    │   └── 📄 qwen2.5-0.5b-instruct-q4_k_m.gguf
+    │
+    ├── 📁 bin
+    │   ├── 🧩 llama-cli.exe
+    │   ├── 🧩 llama-completion.exe
+    │   ├── 🧩 llama-server.exe
+    │   ├── 🧩 llama.dll
+    │   ├── 🧩 ggml.dll
+    │   ├── 🧩 ggml-base.dll
+    │   ├── 🧩 ggml-cpu*.dll
+    │   ├── 🧩 ggml-rpc.dll
+    │   ├── 🧩 libomp*.dll
+    │   └── 🧩 (outros backends CPU/GPU)
+    │
+    ├── 🐍 __init__.py
+    └── 🐍 main.py
 ```
 
 ## Módulos
@@ -133,6 +154,23 @@ Responsável por executar ações reais do sistema:
 - ações do sistema operacional (abrir apps, comandos)
 - integração com APIs externas
 - execução de comandos de dispositivo (TV / embedded)
+
+```datasets/```
+
+Camada de dados utilizada para treino e evolução do NLP.
+
+- ```intents.json``` → base de intenções do sistema
+
+Contém exemplos estruturados de frases mapeadas para intents, usados para:
+
+- treino do modelo TF-IDF
+- geração dos ```.pkl``` (```vectorizer.pkl``` e ```intent_model.pkl```)
+- expansão contínua do reconhecimento de comandos
+
+```bin/```
+
+Camada nativa do sistema para execução do modelo de linguagem local.
+Contém o runtime do llama.cpp compilado para Windows/Linux, responsável pelo fallback inteligente.
 
 ```main.py```
 
@@ -200,6 +238,40 @@ poetry run train
 
 ```bash
 poetry run assistant
+```
+
+1. Subir o servidor local do LLM (fallback)
+O sistema utiliza o llama.cpp local como fallback inteligente quando o NLP não tem confiança suficiente.
+Você pode iniciar o servidor LLM usando os scripts prontos:
+
+Windows
+
+```bash
+scripts/run_llm_server.bat
+```
+
+Linux / WSL / Git Bash
+
+```bash
+chmod +x scripts/run_llm_server.sh
+./scripts/run_llm_server.sh
+```
+
+Eles iniciam o servidor local do ```llama.cpp```, carregam o modelo GGUF: ```assistant/models/qwen2.5-0.5b-instruct-q4_k_m.gguf```
+
+Expõem API local em:
+
+```bash
+http://127.0.0.1:8080
+```
+
+Configuração padrão:
+
+```bash
+ctx-size: 2048
+threads: 4
+temperature: 0.1
+top-p: 0.9
 ```
 
 ## Build do pacote
