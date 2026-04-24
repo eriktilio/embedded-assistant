@@ -1,43 +1,43 @@
 import json
 from pathlib import Path
-
 import sounddevice as sd
 from vosk import Model, KaldiRecognizer
 from ..core.logger import log
 
-# =========================
-# Configuração
-# =========================
 MIC_DEVICE = 1
 DEBUG_AUDIO = False
 
-
-# =========================
-# Caminho do modelo
-# =========================
 BASE_DIR = Path(__file__).resolve().parents[3]
 MODEL_PATH = BASE_DIR / "models" / "vosk-pt"
 
-log("STT", f"loading model from {MODEL_PATH}")
+_model = None
+_rec = None
+_sample_rate = None
 
 
-# =========================
-# Modelo STT
-# =========================
-model = Model(str(MODEL_PATH))
+def _init_stt():
+    global _model, _rec, _sample_rate
 
-device_info = sd.query_devices(MIC_DEVICE, "input")
-SAMPLE_RATE = int(device_info["default_samplerate"])
+    if _model is not None:
+        return
 
-log("STT", f"sample_rate={SAMPLE_RATE}")
+    log("STT", f"loading model from {MODEL_PATH}")
 
-rec = KaldiRecognizer(model, SAMPLE_RATE)
+    _model = Model(str(MODEL_PATH))
+
+    device_info = sd.query_devices(MIC_DEVICE, "input")
+    _sample_rate = int(device_info["default_samplerate"])
+
+    log("STT", f"sample_rate={_sample_rate}")
+
+    _rec = KaldiRecognizer(_model, _sample_rate)
 
 
-# =========================
-# Captura de áudio
-# =========================
 def listen():
+    global _rec
+
+    _init_stt()
+
     if DEBUG_AUDIO:
         log("STT", str(sd.query_devices()))
 
@@ -46,7 +46,7 @@ def listen():
     try:
         with sd.RawInputStream(
             device=MIC_DEVICE,
-            samplerate=SAMPLE_RATE,
+            samplerate=_sample_rate,
             blocksize=4000,
             dtype="int16",
             channels=1,
@@ -56,22 +56,19 @@ def listen():
                 data, _ = stream.read(2000)
                 data_bytes = bytes(data)
 
-                # final result
-                if rec.AcceptWaveform(data_bytes):
-                    result = json.loads(rec.Result())
+                if _rec.AcceptWaveform(data_bytes):
+                    result = json.loads(_rec.Result())
                     text = result.get("text", "").strip()
 
                     if text:
                         log("STT_FINAL", text)
                         return text
 
-                # partial result (live feedback)
                 else:
-                    partial = json.loads(rec.PartialResult())
+                    partial = json.loads(_rec.PartialResult())
                     partial_text = partial.get("partial", "").strip()
 
                     if partial_text:
-                        # evita spam de log pesado (só loga mudanças)
                         log("STT_PARTIAL", partial_text)
 
     except Exception as e:

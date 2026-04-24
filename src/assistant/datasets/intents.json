@@ -1,0 +1,16 @@
+{
+  "hora": [
+    "que horas são",
+    "qual horário agora",
+    "me diga a hora",
+    "hora atual",
+    "que horas é"
+  ],
+  "spotify": [
+    "abrir spotify",
+    "tocar música",
+    "iniciar spotify",
+    "abre o spotify"
+  ],
+  "ligar_led": ["ligar led", "acender luz", "ativa o led", "liga iluminação"]
+}

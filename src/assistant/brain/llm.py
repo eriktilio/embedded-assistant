@@ -1,5 +1,6 @@
 import json
-import requests
+
+from llama_cpp import Llama
 
 from .intents import INTENTS
 from .prompts import intent_prompt
@@ -7,7 +8,17 @@ from ..core.logger import log
 
 VALID_INTENTS = set(INTENTS.keys())
 
+# Carregamento do modelo (UMA vez só)
+llm = Llama(
+    model_path="./models/qwen2.5-0.5b-instruct-q4_k_m.gguf",
+    n_ctx=256,  # importante pra 1GB RAM
+    n_threads=4,  # ajuste conforme CPU do dispositivo
+    n_gpu_layers=0,  # embarcado geralmente CPU only
+    verbose=False,
+)
 
+
+# Parser de JSON da saída
 def extract_json(text: str) -> dict | None:
     text = text.strip()
     text = text.replace("```json", "").replace("```", "")
@@ -25,58 +36,55 @@ def extract_json(text: str) -> dict | None:
     return None
 
 
+# Inferência do SLM
 def think(text: str) -> dict:
     prompt = intent_prompt(text)
 
     try:
-        response = requests.post(
-            "http://localhost:11434/api/generate",
-            json={
-                "model": "qwen2.5:0.5b",
-                "prompt": prompt,
-                "stream": False,
-                "temperature": 0.1,
-                "top_p": 0.9,
-                "repeat_penalty": 1.1,
-            },
-            timeout=20,
-        )
+        output = llm(
+            prompt,
+            max_tokens=50,  # reduz latência e RAM
+            temperature=0.1,
+            top_p=0.9,
+            repeat_penalty=1.1,
+            stop=["```", "\n\n"],
+        )["choices"][0]["text"].strip()
+
     except Exception as e:
         log("LLM_ERROR", str(e))
         return {
             "intent": "unknown",
             "confidence": 0.0,
-            "source": "llm",
+            "source": "llm_local",
         }
 
-    output = response.json().get("response", "").strip()
+        # 📦 Log bruto (debug essencial)
+        log("LLM_RAW", output)
 
     parsed = extract_json(output)
-
-    # log bruto (importantíssimo pra debug futuro)
-    log("LLM_RAW", output)
 
     if not parsed:
         log("LLM_FAIL_PARSE", output)
         return {
             "intent": "unknown",
             "confidence": 0.0,
-            "source": "llm",
+            "source": "llm_local",
         }
 
     intent = parsed.get("intent", "").lower().strip()
 
+    # Validação de intent
     if intent not in VALID_INTENTS:
         log("LLM_INVALID_INTENT", intent)
         intent = "unknown"
         confidence = 0.0
     else:
-        confidence = 0.7  # baseline do LLM
+        confidence = 0.7  # baseline fixo do SLM
 
     result = {
         "intent": intent,
         "confidence": confidence,
-        "source": "llm",
+        "source": "slm_local",
         "raw": output,
     }
 

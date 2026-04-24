@@ -20,22 +20,40 @@ microfone
    ↓
 STT (Vosk)
    ↓
+preprocessing (limpeza de texto opcional)
+   ↓
 Intent Classifier (TF-IDF + sklearn .pkl)
    ↓
-Router (decisão primária)
+confidence gate (decisão de confiança)
    ↓
-Actions (GPIO / sistema / APIs)
-   ↓
-TTS (voz)
-   ↓
-alto-falante
-
-        ↘
-         ↘ fallback inteligente (quando necessário)
-            └── llama.cpp (GGUF quantizado)
-                • interpretação de linguagem natural
-                • comandos complexos
-                • fallback para baixa confiança
+┌──────────────────────────────────────────┐
+│                                          │
+│  NLP confiável (alta confiança)         │
+│                                          │
+│          ↓                               │
+│       Router (decisão primária)         │
+│          ↓                               │
+│ Actions (GPIO / sistema / APIs)         │
+│          ↓                               │
+│ TTS (voz)                               │
+│          ↓                               │
+│ alto-falante                            │
+│                                          │
+└──────────────────────────────────────────┘
+                 ↓
+                 ↓ fallback inteligente (quando necessário)
+                 ↓
+            llama.cpp (GGUF quantizado)
+                 ↓
+      interpretação semântica da intenção
+                 ↓
+        Router (segunda decisão)
+                 ↓
+        Actions (GPIO / sistema / APIs)
+                 ↓
+        TTS (voz)
+                 ↓
+        alto-falante
 ```
 
 ## Estrutura do projeto
@@ -92,28 +110,29 @@ alto-falante
 
 ```audio/```
 
-Responsável pelo processamento de áudio.
+Responsável pelo processamento de áudio em tempo real.
 
-- ```stt.py``` → converte fala em texto
-- ```tts.py``` → converte texto em fala
+- ```stt.py``` → converte fala em texto (Vosk)
+- ```tts.py``` → converte texto em fala (TTS offline)
 
 ```brain/```
 
-Camada de inteligência do sistema.
+Camada de inteligência do sistema (decisão e interpretação).
 
-- ```nlp.py``` → TF-IDF + sklearn intents
-- ```router.py``` → decisão de ação
-- ```llm.py``` → fallback opcional (llama.cpp) qwen2.5-0.5b-instruct-q4_k_m.gguf
-- ```train_intents.py``` → treino do modelo
+- ```nlp.py``` → classificador leve de intents (TF-IDF + sklearn ```.pkl```)
+- ```router.py``` → orquestra decisão final entre NLP e LLM
+- ```llm.py``` → fallback inteligente via ```llama.cpp``` (GGUF quantizado: ```qwen2.5-0.5b-instruct-q4_k_m.gguf```)
+- ```train_intents.py``` → treino do modelo de intents (geração dos ```.pkl```)
 
 ```actions/```
 
-Camada de execução. Exemplos:
+Camada de execução de comandos.
+Responsável por executar ações reais do sistema:
 
-- abrir aplicativos
-- obter hora do sistema
-- controlar GPIO
-- acionar periféricos
+- controle de GPIO (LED, sensores)
+- ações do sistema operacional (abrir apps, comandos)
+- integração com APIs externas
+- execução de comandos de dispositivo (TV / embedded)
 
 ```main.py```
 
@@ -140,9 +159,12 @@ Utiliza:
 
 - Python 3.11+
 - Poetry
-- Ollama (para modelo local)
-- Vosk
+- Vosk (STT offline)
 - Piper (opcional para TTS offline)
+- scikit-learn (TF-IDF + LogisticRegression para intents)
+- numpy / scipy (dependências do modelo NLP)
+- llama.cpp (via Python bindings ou build local)
+- modelo GGUF quantizado (ex: qwen2.5-0.5b-instruct-q4_k_m.gguf)
 
 ## Instalação
 
@@ -158,6 +180,21 @@ cd embedded-assistant
 ```bash
 poetry install
 ```
+
+1. Treinar modelo de intents
+Antes de rodar o assistente, você pode treinar o classificador:
+
+```bash
+poetry run train
+```
+
+👉 Isso irá:
+
+- Ler datasets/intents.json
+- Treinar modelo TF-IDF + LogisticRegression
+- Gerar arquivos:
+  - ```brain/vectorizer.pkl```
+  - ```brain/intent_model.pkl```
 
 1. Executar via script configurado no ```pyproject.toml```:
 

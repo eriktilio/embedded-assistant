@@ -6,6 +6,9 @@ from .core.router import route
 from .core.logger import log
 
 
+NLU_THRESHOLD = 0.55
+
+
 def main():
     log("INFO", "Assistente embarcado iniciado...")
 
@@ -17,23 +20,23 @@ def main():
 
         log("USER", text)
 
-        # 1. NLP first
+        # 1. NLP (sempre primeiro)
         nlp = detect_intent(text)
         log("NLP", f"{nlp['intent']} ({nlp['confidence']:.2f})")
 
         llm = None
 
-        # 2. fallback para LLM se NLP fraco
-        if nlp["confidence"] < 0.55:
+        # 2. decisão de fallback
+        if nlp["confidence"] < NLU_THRESHOLD:
             llm = think(text)
-            log("LLM", llm)
+            log("LLM", f"{llm['intent']} ({llm['confidence']:.2f})")
 
-        # 3. decisão final
+        # 3. router final (decisão)
         response = route(nlp, llm)
 
-        # 4. log de saída única (IMPORTANTE)
+        # 4. log único de saída
         log("ASSISTANT", response)
 
-        # 5. output único garantido
+        # 5. output seguro
         if response:
             speak(response)

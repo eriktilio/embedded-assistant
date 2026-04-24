@@ -12,11 +12,13 @@ dependencies = [
     "sounddevice>=0.5.5,<0.6.0",
     "requests>=2.33.1,<3.0.0",
     "pyttsx3 (>=2.99,<3.0)",
-    "sentence-transformers (>=5.4.1,<6.0.0)"
+    "scikit-learn (>=1.8.0,<2.0.0)",
+    "numpy (>=2.4.4,<3.0.0)",
 ]
 
 [project.scripts]
 assistant = "assistant.main:main"
+train = "assistant.brain.train_intents:main"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
