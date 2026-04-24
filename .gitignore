@@ -1,0 +1,65 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# =========================
+# Virtual env / Poetry
+# =========================
+.venv/
+venv/
+env/
+
+# Poetry build
+dist/
+build/
+*.egg-info/
+
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# IDEs
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Models (MUITO IMPORTANTE)
+# =========================
+# Vosk / STT
+models/
+vosk-model*/
+*.model
+
+# LLM / SLM
+*.gguf
+*.bin
+*.onnx
+
+# sklearn / TF-IDF
+*.pkl
+*.joblib
+
+# =========================
+# Audio cache / runtime
+# =========================
+*.wav
+*.mp3
+
+# =========================
+# Optional local configs
+# =========================
+.env
+config.local.py

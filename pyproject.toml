@@ -1,0 +1,31 @@
+[project]
+name = "embedded-assistant"
+version = "0.1.0"
+description = "Assistente virtual embarcado local"
+authors = [
+    { name = "erik.rey" }
+]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "vosk>=0.3.45,<0.4.0",
+    "sounddevice>=0.5.5,<0.6.0",
+    "requests>=2.33.1,<3.0.0",
+    "pyttsx3 (>=2.99,<3.0)",
+    "sentence-transformers (>=5.4.1,<6.0.0)"
+]
+
+[project.scripts]
+assistant = "assistant.main:main"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+packages = [{ include = "assistant", from = "src" }]
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.0.3"
+black = "^26.3.1"
+ruff = "^0.15.11"
